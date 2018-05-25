@@ -120,8 +120,7 @@ class DocCounter {
     // Convert: Word.doc to Text String
     function read_doc_file() {
         
-        $path = getcwd();
-        $f = $path."/".$this->file;
+        $f = $this->file;
          if(file_exists($f))
         {
             if(($fh = fopen($f, 'r')) !== false ) 
@@ -170,8 +169,7 @@ class DocCounter {
         $zip = new ZipArchive;
         
         // set absolute path
-        $path = getcwd();
-        $f = $path."/".$archiveFile;
+        $f = $archiveFile;
 
         // Open received archive file
         if (true === $zip->open($f)) {
@@ -202,8 +200,7 @@ class DocCounter {
     // Convert: Word.doc to Text String
     function read_doc()
     {
-        $path = getcwd();
-        $f = $path."/".$this->file;
+        $f = $this->file;
         $fileHandle = fopen($f, "r");
         $line = @fread($fileHandle, filesize($this->file));   
         $lines = explode(chr(0x0D),$line);
@@ -225,8 +222,7 @@ class DocCounter {
     function pdf2text()
     {
         //absolute path for file
-        $path = getcwd();
-        $f = $path."/".$this->file;
+        $f = $this->file;
         
         if (file_exists($f)) {
             include('vendor/autoload.php');
@@ -246,8 +242,7 @@ class DocCounter {
 
         $zip = new ZipArchive();
         
-        $path = getcwd();
-        $f = $path."/".$this->file;
+        $f = $this->file;
 
         if($zip->open($f) === true) {
             if(($index = $zip->locateName('docProps/app.xml')) !== false)  {
@@ -265,8 +260,7 @@ class DocCounter {
     function PageCount_PDF()
     {
         //absolute path for file
-        $path = getcwd();
-        $f = $path."/".$this->file;
+        $f = $this->file;
         $pageCount = 0;
         if (file_exists($f)) {
             require_once('lib/fpdf/fpdf.php');
