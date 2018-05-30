@@ -53,7 +53,8 @@
 
 class DocCounter {
     
-    // Class Variables   
+    // Class Variables
+    public $pdfTempFile = '/tmp/temp.pdf';
     private $file;
     private $filetype;
     
@@ -281,7 +282,7 @@ class DocCounter {
         $pdf->SetFont('Times','',12);
         $pdf->MultiCell(0,5,$text);
         //$pdf->Output();
-        $filename="tmp.pdf";
+        $filename = $this->pdfTempFile;
         $pdf->Output($filename,'F');
         
         require_once('lib/fpdi/fpdi.php');
