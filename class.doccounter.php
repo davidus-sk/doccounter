@@ -2,7 +2,7 @@
 
 /* 
  * A collection of simple tools for analysing 
- * .PDF, .DOCX, .DOC and .TXT docs. 
+ * .PDF, .DOCX, .DOC, .RTF and .TXT docs. 
  * 
  *  Copyright (C) 2016-2017
  *    Joseph Blurton (http://github.com/joeblurton)
@@ -105,6 +105,12 @@ class DocCounter {
                 break;
             case "txt":
                 $textContents = file_get_contents($this->file);
+                $obj->wordCount = $this->str_word_count_utf8($textContents);
+                $obj->lineCount = $this->lineCount($textContents);
+                $obj->pageCount = $this->pageCount($textContents);
+                break;
+            case "rtf":
+                $textContents = $this->rtf2text();
                 $obj->wordCount = $this->str_word_count_utf8($textContents);
                 $obj->lineCount = $this->lineCount($textContents);
                 $obj->pageCount = $this->pageCount($textContents);
@@ -217,6 +223,171 @@ class DocCounter {
           }
         $outtext = preg_replace("/[^a-zA-Z0-9\s\,\.\-\n\r\t@\/\_\(\)]/","",$outtext);
         return $outtext;
+    }
+    
+    // Extract text from RTF doc
+    function rtf2text()
+    {
+        $f = $this->file;
+        
+        if (file_exists($f)) {
+            $input_lines = file_get_contents($this->file);
+            
+            preg_match_all("/\\\\([a-z]{1,32})(-?\d{1,10})?[ ]?|\\\\'([0-9a-f]{2})|\\\\([^a-z])|([{}])|[\r\n]+|(.)/i", $input_lines, $output_array);
+
+            $stack = [];
+            $ignorable = false;
+            $ucskip = 1;
+            $curskip = 0;
+            $out = [];
+            $matches = count($output_array[0]);
+
+            $destinations = [
+      'aftncn','aftnsep','aftnsepc','annotation','atnauthor','atndate','atnicn','atnid',
+      'atnparent','atnref','atntime','atrfend','atrfstart','author','background',
+      'bkmkend','bkmkstart','blipuid','buptim','category','colorschememapping',
+      'colortbl','comment','company','creatim','datafield','datastore','defchp','defpap',
+      'do','doccomm','docvar','dptxbxtext','ebcend','ebcstart','factoidname','falt',
+      'fchars','ffdeftext','ffentrymcr','ffexitmcr','ffformat','ffhelptext','ffl',
+      'ffname','ffstattext','field','file','filetbl','fldinst','fldrslt','fldtype',
+      'fname','fontemb','fontfile','fonttbl','footer','footerf','footerl','footerr',
+      'footnote','formfield','ftncn','ftnsep','ftnsepc','g','generator','gridtbl',
+      'header','headerf','headerl','headerr','hl','hlfr','hlinkbase','hlloc','hlsrc',
+      'hsv','htmltag','info','keycode','keywords','latentstyles','lchars','levelnumbers',
+      'leveltext','lfolevel','linkval','list','listlevel','listname','listoverride',
+      'listoverridetable','listpicture','liststylename','listtable','listtext',
+      'lsdlockedexcept','macc','maccPr','mailmerge','maln','malnScr','manager','margPr',
+      'mbar','mbarPr','mbaseJc','mbegChr','mborderBox','mborderBoxPr','mbox','mboxPr',
+      'mchr','mcount','mctrlPr','md','mdeg','mdegHide','mden','mdiff','mdPr','me',
+      'mendChr','meqArr','meqArrPr','mf','mfName','mfPr','mfunc','mfuncPr','mgroupChr',
+      'mgroupChrPr','mgrow','mhideBot','mhideLeft','mhideRight','mhideTop','mhtmltag',
+      'mlim','mlimloc','mlimlow','mlimlowPr','mlimupp','mlimuppPr','mm','mmaddfieldname',
+      'mmath','mmathPict','mmathPr','mmaxdist','mmc','mmcJc','mmconnectstr',
+      'mmconnectstrdata','mmcPr','mmcs','mmdatasource','mmheadersource','mmmailsubject',
+      'mmodso','mmodsofilter','mmodsofldmpdata','mmodsomappedname','mmodsoname',
+      'mmodsorecipdata','mmodsosort','mmodsosrc','mmodsotable','mmodsoudl',
+      'mmodsoudldata','mmodsouniquetag','mmPr','mmquery','mmr','mnary','mnaryPr',
+      'mnoBreak','mnum','mobjDist','moMath','moMathPara','moMathParaPr','mopEmu',
+      'mphant','mphantPr','mplcHide','mpos','mr','mrad','mradPr','mrPr','msepChr',
+      'mshow','mshp','msPre','msPrePr','msSub','msSubPr','msSubSup','msSubSupPr','msSup',
+      'msSupPr','mstrikeBLTR','mstrikeH','mstrikeTLBR','mstrikeV','msub','msubHide',
+      'msup','msupHide','mtransp','mtype','mvertJc','mvfmf','mvfml','mvtof','mvtol',
+      'mzeroAsc','mzeroDesc','mzeroWid','nesttableprops','nextfile','nonesttables',
+      'objalias','objclass','objdata','object','objname','objsect','objtime','oldcprops',
+      'oldpprops','oldsprops','oldtprops','oleclsid','operator','panose','password',
+      'passwordhash','pgp','pgptbl','picprop','pict','pn','pnseclvl','pntext','pntxta',
+      'pntxtb','printim','private','propname','protend','protstart','protusertbl','pxe',
+      'result','revtbl','revtim','rsidtbl','rxe','shp','shpgrp','shpinst',
+      'shppict','shprslt','shptxt','sn','sp','staticval','stylesheet','subject','sv',
+      'svb','tc','template','themedata','title','txe','ud','upr','userprops',
+      'wgrffmtfilter','windowcaption','writereservation','writereservhash','xe','xform',
+      'xmlattrname','xmlattrvalue','xmlclose','xmlname','xmlnstbl',
+      'xmlopen'];
+	  
+            $specialchars = [
+      'par' => "\n",
+      'sect' => "\n\n",
+      'page' => "\n\n",
+      'line' => "\n",
+      'tab' => "\t",
+      'emdash' => "\u2014",
+      'endash' => "\u2013",
+      'emspace' => "\u2003",
+      'enspace' => "\u2002",
+      'qmspace' => "\u2005",
+      'bullet' => "\u2022",
+      'lquote' => "\u2018",
+      'rquote' => "\u2019",
+      'ldblquote' => "\201C",
+      'rdblquote' => "\u201D"];
+            
+            for ($i = 0; $i < $matches; $i++) {
+                $word = $output_array[1][$i];
+                $arg = $output_array[2][$i];
+                $hex = $output_array[3][$i];
+                $char = $output_array[4][$i];
+                $brace = $output_array[5][$i];
+                $tchar = $output_array[6][$i];
+	
+                // braces
+                if (!empty($brace)) {
+                    $curskip = 0;
+
+                    if ($brace == '{') {
+                        array_push($stack, [$ucskip, $ignorable]);
+                    } else if ($brace == '}') {
+                        list($ucskip, $ignorable) = array_pop($stack);
+                    }
+                }
+                // not a letter
+                else if (!empty($char)) {
+                    $curskip = 0;
+
+                    if ($char == '~') {
+                        if (!$ignorable) {
+                            $out[] = "\xA0";
+                        }
+                    } else if (in_array($char, ['{','}','\\'])) {
+                        if (!$ignorable) {
+                            $out[] = $char;
+                        }
+                    } else if ($char == '*') {
+                        $ignorable = true;
+                    }
+                }
+                //
+                else if (!empty($word)) {
+                    $curskip = 0;
+
+                    if (in_array($word, $destinations)) {
+                        $ignorable = true;
+                    } else if ($ignorable) {
+
+                    } else if (!empty($specialchars[$word])) {
+                        $out[] = $specialchars[$word];
+                    } else if ($word == 'uc') {
+                        $ucskip = (int)$arg;
+                    } else if ($word == 'u') {
+                        $c = (int)$arg;
+                        if ($c < 0) {
+                            $c += 0x10000;
+                        }
+                        if ($c > 127) {
+                            $out[] = chr($c);
+                        } else {
+                            $out[] = chr($c);
+                        }
+
+                        $curskip = $ucskip;
+                    }
+                }
+                //
+                else if (!empty($hex)) {
+                    if ($curskip > 0) {
+                        $curskip -= 1;
+                    } else if (!$ignorable) {
+                        $c = hexdec($hex);
+                        if ($c > 127) {
+                            $out[] = chr($c);
+                        } else {
+                            $out[] = chr($c);
+                        }
+                    }
+                }
+                //
+                else if (!empty($tchar)) {
+                    if ($curskip > 0) {
+                        $curskip -= 1;
+                    } else if (!$ignorable) {
+                        $out[] = $tchar;
+                    }
+                }
+            }
+
+            return join('', $out);
+        }
+        
+        return null;
     }
     
     // Convert: Adobe.pdf to Text String
