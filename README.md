@@ -1,5 +1,5 @@
 # DocCounter
-A collection of simple tools for analysing .PDF, .DOCX, .DOC and .TXT files.
+A collection of simple tools for analysing .PDF, .DOCX, .DOC, .RTF and .TXT files.
 
 I was struggling to find a comprehensive set of tools to do simple word, line and page counts for a variety of commonly used document formats. A lot of the conversion scripts and tools were unsuitable, somehow lacking, or poorly documented. So after a bit of head-scratching here is a simple working set of tools assembled into a workmanlike class.
 
@@ -43,7 +43,6 @@ The class can be easily modified to extract the plaintext and act as an all-in-o
 
 Quick list of missing formats:
 
-* RTF (without shell access, all solutions found so far leave metadata/header info in text output).
 * ODT.
 * The millions of others I've forgotten.
 
