@@ -162,7 +162,8 @@ class DocCounter {
     }
     // Jonny 5's simple word splitter
     function str_word_count_utf8($str) {
-        return count(preg_split('~[^\p{L}\p{N}\']+~u',$str));
+        //return count(preg_split('~[^\p{L}\p{N}\']+~u',$str));
+	return str_word_count($str);
     }
     // Convert: Word.docx to Text String
     function docx2text()
